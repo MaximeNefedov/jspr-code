@@ -1,6 +1,4 @@
 package ru.netology;
-
-import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -23,10 +21,6 @@ public class Main {
         e.printStackTrace();
       }
     });
-
-//    System.out.println(server.getHandlers());
-//    System.out.println(server.getHandlers().get("GET").size());
-
 
     server.addHandler("POST", "/messages.txt", (request, out) -> {
       try {

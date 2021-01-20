@@ -224,9 +224,4 @@ public class Server {
         }));
         handlers.put("GET", defaultHandlers);
     }
-
-    public ConcurrentMap<String, Map<String, Handler>> getHandlers() {
-        return handlers;
-    }
-
 }
