@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -68,9 +69,19 @@ public class Server {
         if (request.matches("POST.+\\r\\n\\r\\n.+")) {
             return processingPOSTRequest(request);
         } else {
-            // Если GET запрос без тела (допустим, что сервер не обрабатывает GET запросы с телом)
-            return checkRequestLineParts(parsingRequestLine(request));
+            // Проверка GET запроса
+            return checkRequestLineParts(parsingRequestLine(getRequestLine((request))));
         }
+    }
+
+    private Map<String, String> getRequestHeaders(String request) {
+        Pattern pattern = Pattern.compile("(.+):(.+)");
+        Matcher matcher = pattern.matcher(request);
+        Map<String, String> headers = new HashMap<>();
+        while (matcher.find()) {
+            headers.put(matcher.group(1), matcher.group(2));
+        }
+        return headers;
     }
 
     private boolean checkRequestLineParts(String[] parts) {
@@ -82,11 +93,11 @@ public class Server {
     }
 
     private String getRequestLine(String request) {
-        Pattern pattern = Pattern.compile("(.+)(\\r\\n\\r\\n)(.+)");
+        Pattern pattern = Pattern.compile("(GET|POST).+");
         Matcher matcher = pattern.matcher(request);
         String requestLine = null;
         while (matcher.find()) {
-            requestLine = matcher.group(1);
+            requestLine = matcher.group();
         }
         return requestLine;
     }
@@ -99,7 +110,6 @@ public class Server {
         while (matcher.find()) {
             requestBody = matcher.group(3);
         }
-
         return requestBody;
     }
 
@@ -122,14 +132,16 @@ public class Server {
                         bytesArray[counter++] = readByte;
                     }
                     String request = new String(bytesArray);
+                    System.out.println(request);
 
                     if (!processingRequest(request)) {
                         out.write("Bad request :( ".getBytes());
                         break;
                     }
 
-                    final var parts = parsingRequestLine(request);
+                    final var parts = parsingRequestLine(getRequestLine(request));
                     final var path = parts[1];
+//                    System.out.println(path);
 
                     RequestBuilder builder = new RequestBuilder()
                             .setRequestMethod(parts[0])
@@ -141,6 +153,8 @@ public class Server {
                         sendResponse(builder.build(), out);
                         break;
                     }
+
+                    builder.setRequestHeaders(getRequestHeaders(request));
 
                     if (getRequestBody(request) != null) {
                         builder.setRequestBody(getRequestBody(request));
@@ -154,6 +168,7 @@ public class Server {
                             .setMimeType(mimeType)
                             .setFileSize(length);
                     sendResponse(builder.build(), out);
+
                     break;
                 }
             } catch (IOException e) {

@@ -1,16 +1,21 @@
 package ru.netology;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 public class Request {
     private String requestMethod;
+    private Map<String, String> requestHeaders;
     private String requestPath;
     private String protocolType;
-    private String requestHeader;
     private String requestBody;
     private String mimeType;
     private Path filePath;
     private long fileSize;
+
+    public void setRequestHeaders(Map<String, String> requestHeaders) {
+        this.requestHeaders = requestHeaders;
+    }
 
     public void setRequestMethod(String requestMethod) {
         this.requestMethod = requestMethod;
@@ -22,10 +27,6 @@ public class Request {
 
     public void setProtocolType(String protocolType) {
         this.protocolType = protocolType;
-    }
-
-    public void setRequestHeader(String requestHeader) {
-        this.requestHeader = requestHeader;
     }
 
     public void setRequestBody(String requestBody) {
@@ -56,8 +57,8 @@ public class Request {
         return protocolType;
     }
 
-    public String getRequestHeader() {
-        return requestHeader;
+    public Map<String, String> getRequestHeaders() {
+        return requestHeaders;
     }
 
     public String getRequestBody() {
@@ -78,15 +79,16 @@ public class Request {
 
     @Override
     public String toString() {
-        return "Request{" +
-                "requestMethod='" + requestMethod + '\'' +
-                ", requestPath='" + requestPath + '\'' +
-                ", protocolType='" + protocolType + '\'' +
-                ", requestHeader='" + requestHeader + '\'' +
-                ", requestBody='" + requestBody + '\'' +
-                ", mimeType='" + mimeType + '\'' +
-                ", filePath=" + filePath +
-                ", fileSize=" + fileSize +
-                '}';
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
+        }
+        String headers = sb.toString();
+        String requestBodyForView = "body is empty";
+        if (requestBody != null && !requestBody.isEmpty()) {
+            requestBodyForView = requestBody;
+        }
+        return String.format("Request:\n%s %s %s\n%s\r\nbody: %s\r\n\r\nMimeType: %s\nFile path: %s\nFile size: %d",
+                requestMethod, requestPath, protocolType, headers, requestBodyForView, mimeType, filePath, fileSize);
     }
 }

@@ -18,7 +18,7 @@ public class Client {
              var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              var out = new PrintWriter(socket.getOutputStream(), true)) {
             // classic case
-//            out.println("GET /classic.html /HTTP/1.1");
+            out.println("GET /classic.html /HTTP/1.1");
 
             // 404
 //            out.println("GET /clas!sic.html /HTTP/1.1");
@@ -35,9 +35,9 @@ public class Client {
 //            out.println("GET /messages.txt /HTTP/1.1");
 
             // POST - запрос. Просто добавит переданный данные в ответ
-            out.println("POST /messages.txt /HTTP/1.1" +
-                    "\r\n\r\n" +
-                    "Hello, Server! Please add this string into file");
+//            out.println("POST /messages.txt /HTTP/1.1" +
+//                    "\r\n\r\n" +
+//                    "Hello, Server! Please add this string into file");
 
             StringBuilder sb = new StringBuilder("Server response:\n");
             String x;

@@ -6,7 +6,7 @@ public class Main {
   public static void main(String[] args) {
     Server server = new Server(9999);
 
-    server.addHandler("GET", "/messages.txt", (request, out) -> {
+    server.addHandler("GET", "/messages.html", (request, out) -> {
       try {
         out.write((
                 "HTTP/1.1 200 OK\r\n" +
@@ -22,8 +22,13 @@ public class Main {
       }
     });
 
-    server.addHandler("POST", "/messages.txt", (request, out) -> {
+    server.addHandler("POST", "/messages.html", (request, out) -> {
       try {
+        final var template = Files.readString(request.getFilePath());
+        final var content = template.replace(
+                "{message}",
+                request.getRequestBody()
+        ).getBytes();
         out.write((
                 "HTTP/1.1 200 OK\r\n" +
                         "Content-Type: " + request.getMimeType() + "\r\n" +
@@ -34,6 +39,7 @@ public class Main {
                         "\r\n"
         ).getBytes());
         Files.copy(request.getFilePath(), out);
+        out.write(content);
         out.flush();
       } catch (IOException e) {
         e.printStackTrace();

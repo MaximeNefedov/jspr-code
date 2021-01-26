@@ -1,6 +1,7 @@
 package ru.netology;
 
 import java.nio.file.Path;
+import java.util.Map;
 
 public class RequestBuilder {
     private final Request request = new Request();
@@ -20,8 +21,8 @@ public class RequestBuilder {
         return this;
     }
 
-    public RequestBuilder setRequestHeader(String requestHeader) {
-        request.setRequestHeader(requestHeader);
+    public RequestBuilder setRequestHeaders(Map<String, String> requestHeaders) {
+        request.setRequestHeaders(requestHeaders);
         return this;
     }
 
