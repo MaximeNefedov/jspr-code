@@ -10,6 +10,7 @@ public class Main {
       try {
         out.write((
                 "HTTP/1.1 200 OK\r\n" +
+                        "Queries: " + request.getQueryParams() + "\r\n" +
                         "Content-Type: " + request.getMimeType() + "\r\n" +
                         "Content-Length: " + request.getFileSize() + "\r\n" +
                         "Connection: close\r\n" +

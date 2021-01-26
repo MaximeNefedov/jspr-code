@@ -1,8 +1,11 @@
 package ru.netology;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
+
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -41,6 +44,10 @@ public class Server {
     }
 
     public void addHandler(String requestMethod, String requestPath, Handler handler) {
+//        String correctPath = requestPath;
+//        if (requestPathContainsQuery(requestPath)) {
+//            correctPath = getPathWithoutQuery(requestPath);
+//        }
         if (handlers.get(requestMethod) != null) {
             handlers.get(requestMethod).put(requestPath, handler);
         } else {
@@ -113,6 +120,38 @@ public class Server {
         return requestBody;
     }
 
+    private boolean requestPathContainsQuery(String path) {
+        return path.matches(".+\\?.+");
+    }
+
+    private String getPathWithoutQuery(String path) {
+        Pattern pattern = Pattern.compile(".+\\?");
+        Matcher matcher = pattern.matcher(path);
+        String pathWithoutQuery = null;
+        while (matcher.find()) {
+            pathWithoutQuery = matcher.group().replaceAll("\\?", "");
+        }
+        return pathWithoutQuery;
+    }
+
+    private Map<String, List<String>> getQuery(String path) throws URISyntaxException {
+        List<NameValuePair> parse = URLEncodedUtils.parse(new URI(path), StandardCharsets.UTF_8);
+        Map<String, List<String>> map = new HashMap<>();
+        for (NameValuePair nameValuePair : parse) {
+            // URLDecoder используется для того, чтобы в случае чего, раскодировать
+            // закодированные символы, например, кириллицу
+            if (map.get(nameValuePair.getName()) != null) {
+                map.get(URLDecoder.decode(nameValuePair.getName(), StandardCharsets.UTF_8))
+                        .add(URLDecoder.decode(nameValuePair.getValue(), StandardCharsets.UTF_8));
+            } else {
+                List<String> list = new ArrayList<>();
+                list.add(URLDecoder.decode(nameValuePair.getValue(), StandardCharsets.UTF_8));
+                map.put(nameValuePair.getName(), list);
+            }
+        }
+        return map;
+    }
+
     private void handleClient(Socket clientSocket) {
         service.execute(() -> {
             try (final var in = new BufferedInputStream((clientSocket.getInputStream()));
@@ -140,15 +179,24 @@ public class Server {
                     }
 
                     final var parts = parsingRequestLine(getRequestLine(request));
-                    final var path = parts[1];
-//                    System.out.println(path);
 
                     RequestBuilder builder = new RequestBuilder()
-                            .setRequestMethod(parts[0])
-                            .setRequestPath(parts[1])
-                            .setProtocolType(parts[2]);
+                            .setRequestMethod(parts[0]);
 
-                    if (!validPaths.contains(parts[1])) {
+                    var path = parts[1];
+                    System.out.println(path);
+
+                    if (!requestPathContainsQuery(path)) {
+                        builder.setRequestPath(path);
+                    } else {
+                        builder.setQuery(getQuery(path));
+                        path = getPathWithoutQuery(path);
+                        builder.setRequestPath(path);
+                    }
+
+                    builder.setProtocolType(parts[2]);
+
+                    if (!validPaths.contains(path)) {
                         builder.setRequestPath("InvalidPaths");
                         sendResponse(builder.build(), out);
                         break;
@@ -168,10 +216,9 @@ public class Server {
                             .setMimeType(mimeType)
                             .setFileSize(length);
                     sendResponse(builder.build(), out);
-
                     break;
                 }
-            } catch (IOException e) {
+            } catch (IOException | URISyntaxException e) {
                 e.printStackTrace();
             } finally {
                 semaphore.release();
@@ -179,7 +226,7 @@ public class Server {
         });
     }
 
-//    Установка handler`ов по-умолчанию:
+    //    Установка handler`ов по-умолчанию:
     private void installDefaultHandlers() {
         // Для GET-запроса
         ConcurrentMap<String, Handler> defaultHandlers = new ConcurrentHashMap<>();

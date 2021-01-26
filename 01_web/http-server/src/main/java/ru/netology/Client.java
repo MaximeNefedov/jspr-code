@@ -18,7 +18,7 @@ public class Client {
              var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              var out = new PrintWriter(socket.getOutputStream(), true)) {
             // classic case
-            out.println("GET /classic.html /HTTP/1.1");
+//            out.println("GET /classic.html /HTTP/1.1");
 
             // 404
 //            out.println("GET /clas!sic.html /HTTP/1.1");
@@ -26,6 +26,7 @@ public class Client {
             // Bad requests
 //            out.println("POST /classic.html /HTTP/1.1");
 //            out.println("GET /classic.html /HTTP/1.1");
+            out.println("GET /messa1ges.html?name=Max&surname=Nefedov /HTTP/1.1");
 
 
             // Из стандатрого списка файлов

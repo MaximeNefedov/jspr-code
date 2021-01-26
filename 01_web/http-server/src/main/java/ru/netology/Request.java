@@ -1,17 +1,28 @@
 package ru.netology;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 
 public class Request {
     private String requestMethod;
     private Map<String, String> requestHeaders;
+    private Map<String, List<String>> queries;
     private String requestPath;
     private String protocolType;
     private String requestBody;
     private String mimeType;
     private Path filePath;
     private long fileSize;
+
+
+    public List<String> getQueryParam(String name) {
+        return queries.get(name);
+    }
+
+    public Map<String, List<String>> getQueryParams() {
+        return queries;
+    }
 
     public void setRequestHeaders(Map<String, String> requestHeaders) {
         this.requestHeaders = requestHeaders;
@@ -45,6 +56,10 @@ public class Request {
         this.fileSize = fileSize;
     }
 
+    public void setQueries(Map<String, List<String>> queries) {
+        this.queries = queries;
+    }
+
     public String getRequestMethod() {
         return requestMethod;
     }
@@ -75,6 +90,10 @@ public class Request {
 
     public long getFileSize() {
         return fileSize;
+    }
+
+    public Map<String, List<String>> getQueries() {
+        return queries;
     }
 
     @Override
