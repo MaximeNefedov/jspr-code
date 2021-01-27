@@ -15,6 +15,8 @@ public class Request {
     private Path filePath;
     private long fileSize;
 
+    // Если это POST запрос:
+    private Map<String, List<String>> bodyParams;
 
     public List<String> getQueryParam(String name) {
         return queries.get(name);
@@ -22,6 +24,10 @@ public class Request {
 
     public Map<String, List<String>> getQueryParams() {
         return queries;
+    }
+
+    public void setBodyParams(Map<String, List<String>> bodyParams) {
+        this.bodyParams = bodyParams;
     }
 
     public void setRequestHeaders(Map<String, String> requestHeaders) {
@@ -62,6 +68,14 @@ public class Request {
 
     public String getRequestMethod() {
         return requestMethod;
+    }
+
+    public Map<String, List<String>> getBodyParams() {
+        return bodyParams;
+    }
+
+    public List<String> getBodyParam(String param) {
+        return bodyParams.get(param);
     }
 
     public String getRequestPath() {

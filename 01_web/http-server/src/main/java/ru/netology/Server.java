@@ -152,6 +152,22 @@ public class Server {
         return map;
     }
 
+    private Map<String, List<String>> processingBodyParams(String requestBody) {
+        String[] splited = requestBody.split("&");
+        Map<String, List<String>> map = new HashMap<>();
+        for (String s : splited) {
+            String[] split = s.split("=");
+            if (map.get(split[0]) != null) {
+                map.get(URLDecoder.decode(split[0], StandardCharsets.UTF_8)).add(URLDecoder.decode(split[1], StandardCharsets.UTF_8));
+            } else {
+                List<String> list = new ArrayList<>();
+                list.add(URLDecoder.decode(split[1], StandardCharsets.UTF_8));
+                map.put(URLDecoder.decode(split[0], StandardCharsets.UTF_8), list);
+            }
+        }
+        return map;
+    }
+
     private void handleClient(Socket clientSocket) {
         service.execute(() -> {
             try (final var in = new BufferedInputStream((clientSocket.getInputStream()));
@@ -161,7 +177,7 @@ public class Server {
                     List<Byte> bytes = new ArrayList<>();
                     while ((x = in.read()) != -1) {
                         bytes.add((byte) x);
-                        if (in.available() == 1) {
+                        if (in.available() == 0) {
                             break;
                         }
                     }
@@ -171,7 +187,7 @@ public class Server {
                         bytesArray[counter++] = readByte;
                     }
                     String request = new String(bytesArray);
-                    System.out.println(request);
+//                    System.out.println(request);
 
                     if (!processingRequest(request)) {
                         out.write("Bad request :( ".getBytes());
@@ -184,7 +200,7 @@ public class Server {
                             .setRequestMethod(parts[0]);
 
                     var path = parts[1];
-                    System.out.println(path);
+//                    System.out.println(path);
 
                     if (!requestPathContainsQuery(path)) {
                         builder.setRequestPath(path);
@@ -205,7 +221,9 @@ public class Server {
                     builder.setRequestHeaders(getRequestHeaders(request));
 
                     if (getRequestBody(request) != null) {
-                        builder.setRequestBody(getRequestBody(request));
+                        String requestBody = getRequestBody(request);
+                        builder.setBodyParams(processingBodyParams(requestBody));
+                        builder.setRequestBody(requestBody);
                     }
 
                     final var filePath = Path.of(".", "public", path);

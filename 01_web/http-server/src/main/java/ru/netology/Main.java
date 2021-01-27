@@ -36,7 +36,7 @@ public class Main {
                         "Content-Length: " + request.getFileSize() + "\r\n" +
                         "Connection: close\r\n" +
                         "\r\n" +
-                        "Сообщение, переданное в POST-запросе: " + request.getRequestBody() +
+                        "Сообщение, переданное в POST-запросе: " + request.getBodyParams() +
                         "\r\n"
         ).getBytes());
         Files.copy(request.getFilePath(), out);

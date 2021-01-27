@@ -32,6 +32,11 @@ public class RequestBuilder {
         return this;
     }
 
+    public RequestBuilder setBodyParams(Map<String, List<String>> bodyParams) {
+        request.setBodyParams(bodyParams);
+        return this;
+    }
+
     public RequestBuilder setRequestBody(String requestBody) {
         request.setRequestBody(requestBody);
         return this;
