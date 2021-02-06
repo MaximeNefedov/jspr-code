@@ -26,11 +26,11 @@ public class Client {
             // Bad requests
 //            out.println("POST /classic.html /HTTP/1.1");
 //            out.println("GET /classic.html /HTTP/1.1");
-            out.println("GET /messa1ges.html?name=Max&surname=Nefedov /HTTP/1.1");
+//            out.println("GET /messa1ges.html?name=Max&surname=Nefedov /HTTP/1.1");
 
 
             // Из стандатрого списка файлов
-//            out.println("GET /index.html /HTTP/1.1");
+            out.println("GET /index.html /HTTP/1.1");
 
             // Созданный файл messages.txt и и добавленный для него handler
 //            out.println("GET /messages.txt /HTTP/1.1");

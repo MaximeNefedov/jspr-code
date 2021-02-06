@@ -14,7 +14,7 @@ public class Request {
     private String mimeType;
     private Path filePath;
     private long fileSize;
-
+    private Map<String, List<byte[]>> parts;
     // Если это POST запрос:
     private Map<String, List<String>> bodyParams;
 
@@ -66,9 +66,21 @@ public class Request {
         this.queries = queries;
     }
 
+    public void setParts(Map<String, List<byte[]>> parts) {
+        this.parts = parts;
+    }
+
     public String getRequestMethod() {
         return requestMethod;
     }
+
+    public List<byte[]> getPart(String name) {
+        return parts.get(name);
+    }
+    public Map<String, List<byte[]>> getParts() {
+        return parts;
+    }
+
 
     public Map<String, List<String>> getBodyParams() {
         return bodyParams;

@@ -12,6 +12,11 @@ public class RequestBuilder {
         return this;
     }
 
+    public RequestBuilder setParts(Map<String, List<byte[]>> parts) {
+        request.setParts(parts);
+        return this;
+    }
+
     public RequestBuilder setRequestPath(String requestPath) {
         request.setRequestPath(requestPath);
         return this;

@@ -146,7 +146,7 @@ public class Server {
         Map<String, String> map = new HashMap<>();
         for (String s : headersBytesString) {
             String[] split = s.split(":");
-            map.put(split[0], split[1]);
+            map.put(split[0].trim(), split[1].trim());
         }
         return map;
     }
@@ -163,7 +163,6 @@ public class Server {
                     byte[] buffer = new byte[limit];
                     int read = in.read(buffer);
                     final var requestLineDelimiter = new byte[]{'\r', '\n'};
-                    // возвращаем индекс последнего байта до \r\n
                     final var requestLineEnd = indexOf(buffer, requestLineDelimiter, 0, read);
 
                     if (requestLineEnd == -1) {
@@ -171,7 +170,6 @@ public class Server {
                         break;
                     }
 
-                    // читаем request line
                     final var requestLine = new String(Arrays.copyOf(buffer, requestLineEnd)).split(" ");
                     if (!checkRequestLineParts(requestLine)) {
                         badRequest(out);
@@ -179,8 +177,6 @@ public class Server {
                     }
 
                     System.out.println(Arrays.toString(requestLine));
-
-
                     final var method = requestLine[0];
                     if (!allowedMethods.contains(method)) {
                         badRequest(out);
@@ -190,7 +186,7 @@ public class Server {
                     RequestBuilder builder = new RequestBuilder();
                     builder.setRequestMethod(method);
 
-                    System.out.println(method);
+//                    System.out.println(method);
 
                     var path = requestLine[1];
 
@@ -199,20 +195,12 @@ public class Server {
                         break;
                     }
 
-                    // Если путь не поддерживается сервером, то пометить его
-                    // как "невалидный" и из мапы выбрать соответствующий handler
-                    if (!validPaths.contains(path)) {
-                        builder.setRequestPath("InvalidPaths");
-                        sendResponse(builder.build(), out);
-                        break;
-                    }
-
-//                    builder.setRequestPath(path);
-                    System.out.println(path);
-
-                    // Если путь содержит query параметры,
-                    // то сохранить параметры и вернуть путь без них
+                    // Обработка ситуцации, когда:
+                    // Есть query параметры или бразуер отрправил запрос вида: /index.html?
                     if (!requestPathContainsQuery(path)) {
+                        if (path.contains("?")) {
+                            path = path.replaceAll("\\?", "");
+                        }
                         builder.setRequestPath(path);
                     } else {
                         builder.setQuery(getQuery(path));
@@ -220,13 +208,22 @@ public class Server {
                         builder.setRequestPath(path);
                     }
 
+                    System.out.println(path);
+                    if (!validPaths.contains(path)) {
+                        builder.setRequestPath("InvalidPaths");
+                        sendResponse(builder.build(), out);
+                        break;
+                    }
+
+//                    System.out.println(path);
+
                     final var protocolType = requestLine[2];
                     if (!checkProtocolType(protocolType)) {
                         badRequest(out);
                     }
 
                     builder.setProtocolType(protocolType);
-                    System.out.println(protocolType);
+//                    System.out.println(protocolType);
 
                     final var headersDelimiter = new byte[]{'\r', '\n', '\r', '\n'};
                     final var headersStart = requestLineEnd + requestLineDelimiter.length;
@@ -235,30 +232,34 @@ public class Server {
                         badRequest(out);
                         continue;
                     }
-
-                    // отматываем на начало буфера
                     in.reset();
-                    // пропускаем requestLine
                     in.skip(headersStart);
 
                     final var headersBytes = in.readNBytes(headersEnd - headersStart);
                     Map<String, String> requestHeaders = getRequestHeaders(headersBytes);
                     builder.setRequestHeaders(requestHeaders);
 
-                    System.out.println(requestHeaders);
+//                    for (Map.Entry<String, String> stringStringEntry : requestHeaders.entrySet()) {
+//                        System.out.println(stringStringEntry.getKey() + ": " + stringStringEntry.getValue());
+//                    }
+//                    System.out.println();
 
-                    // для GET тела нет
                     if (!method.equals("GET")) {
                         in.skip(headersDelimiter.length);
                         final var content = requestHeaders.get("Content-Length");
                         final int contentLength = Integer.parseInt(content.replaceAll(" ", "").trim());
                         final var bodyBytes = in.readNBytes(contentLength);
                         final var requestBody = new String(bodyBytes);
+//                        System.out.println(requestBody);
 
                         builder.setRequestBody(requestBody);
-//                        builder.setBodyParams(processingBodyParams(requestBody));
 
-                        System.out.println(requestBody);
+                        final var headerParam = requestHeaders.get("Content-Type");
+                        if (headerParam.startsWith("multipart/form-data")) {
+                            processingMultiPart(bodyBytes, requestBody, contentLength, headerParam, builder);
+                        } else {
+                            builder.setBodyParams(processingBodyParams(requestBody));
+                        }
                     }
 
                     final var filePath = Path.of(".", "public", path);
@@ -270,70 +271,6 @@ public class Server {
                             .setFileSize(length);
                     sendResponse(builder.build(), out);
                     break;
-
-
-//                    int x;
-//                    List<Byte> bytes = new ArrayList<>();
-//                    while ((x = in.read()) != -1) {
-//                        bytes.add((byte) x);
-//                        if (in.available() == 0) {
-//                            break;
-//                        }
-//                    }
-//                    byte[] bytesArray = new byte[bytes.size()];
-//                    int counter = 0;
-//                    for (Byte readByte : bytes) {
-//                        bytesArray[counter++] = readByte;
-//                    }
-//                    String request = new String(bytesArray);
-////                    System.out.println(request);
-//
-//                    if (!processingRequest(request)) {
-//                        out.write("Bad request :( ".getBytes());
-//                        break;
-//                    }
-//
-//                    final var parts = parsingRequestLine(getRequestLine(request));
-//
-//                    RequestBuilder builder = new RequestBuilder()
-//                            .setRequestMethod(parts[0]);
-//
-//                    var path = parts[1];
-////                    System.out.println(path);
-//
-//                    if (!requestPathContainsQuery(path)) {
-//                        builder.setRequestPath(path);
-//                    } else {
-//                        builder.setQuery(getQuery(path));
-//                        path = getPathWithoutQuery(path);
-//                        builder.setRequestPath(path);
-//                    }
-//
-//                    builder.setProtocolType(parts[2]);
-//
-//                    if (!validPaths.contains(path)) {
-//                        builder.setRequestPath("InvalidPaths");
-//                        sendResponse(builder.build(), out);
-//                        break;
-//                    }
-//
-//                    builder.setRequestHeaders(getRequestHeaders(request));
-//
-//                    if (getRequestBody(request) != null) {
-//                        String requestBody = getRequestBody(request);
-//                        builder.setBodyParams(processingBodyParams(requestBody));
-//                        builder.setRequestBody(requestBody);
-//                    }
-//
-//                    final var filePath = Path.of(".", "public", path);
-//                    final var mimeType = Files.probeContentType(filePath);
-//                    final var length = Files.size(filePath);
-//
-//                    builder.setFilePath(filePath)
-//                            .setMimeType(mimeType)
-//                            .setFileSize(length);
-//                    sendResponse(builder.build(), out);
-//                    break;
                 }
             } catch (IOException | URISyntaxException e) {
                 e.printStackTrace();
@@ -343,58 +280,138 @@ public class Server {
         });
     }
 
-//    private String[] parsingRequestLine(String requestLine) {
-//        return requestLine.split(" ");
-//    }
+    private String findBoundary(String headerParam) {
+        Pattern pattern = Pattern.compile("--+.+");
+        Matcher matcher = pattern.matcher(headerParam);
+        String boundary = null;
+        while (matcher.find()) {
+            boundary = matcher.group();
+        }
+        return boundary;
+    }
 
-//    private boolean processingRequest(String request) {
-//        // Если у POST запроса отсутствует тело
-//        if (request.matches("POST.+")) {
-//            return false;
-//        }
-//        if (request.matches("POST.+\\r\\n\\r\\n.+")) {
-//            return processingPOSTRequest(request);
-//        } else {
-//            // Проверка GET запроса
-//            return checkRequestLineParts(parsingRequestLine(getRequestLine((request))));
-//        }
-//    }
+    private byte[] getContentTypeDelimiter(String bodyPart) {
+//        Content-Type: image/jpeg
+        Pattern pattern = Pattern.compile("Content-Type:.+");
+        Matcher matcher = pattern.matcher(bodyPart);
+        String contentType = null;
+        while (matcher.find()) {
+            contentType = matcher.group();
+        }
+        return getContentBytes(contentType);
+    }
 
-//    private Map<String, String> getRequestHeaders(String request) {
-//        Pattern pattern = Pattern.compile("(.+):(.+)");
-//        Matcher matcher = pattern.matcher(request);
-//        Map<String, String> headers = new HashMap<>();
-//        while (matcher.find()) {
-//            headers.put(matcher.group(1), matcher.group(2));
-//        }
-//        return headers;
-//    }
+    private byte[] getContentBytes(String content) {
+        byte[] contentBytes = null;
+        if (content != null) {
+            char[] contentChars = content.toCharArray();
+            contentBytes = new byte[contentChars.length];
+            for (int i = 0; i < contentBytes.length; i++) {
+                contentBytes[i] = (byte) contentChars[i];
+            }
+        }
+        return contentBytes;
+    }
 
+    private byte[] getFileBody(byte[] contentTypeDelimiter, byte[] boundaryDelimiter, byte[] bodyBytes, int contentLength) {
+        int index = indexOf(bodyBytes, contentTypeDelimiter, 0, contentLength);
+        byte[] delimiter = new byte[]{'\r', '\n', '\r', '\n'};
+        int startOfFileBody = index + contentTypeDelimiter.length + delimiter.length;
+        byte[] bytes = Arrays.copyOf(bodyBytes, startOfFileBody);
+        byte[] fileBytes = Arrays.copyOfRange(bodyBytes, bytes.length, bodyBytes.length - boundaryDelimiter.length - delimiter.length);
+        // запись файла в корневой каталог
+        writeFile(fileBytes);
+        return fileBytes;
 
-//    private boolean processingPOSTRequest(String request) {
-//        return checkRequestLineParts(parsingRequestLine(getRequestLine(request)));
-//    }
+    }
 
-//    private String getRequestLine(String request) {
-//        Pattern pattern = Pattern.compile("(GET|POST).+");
-//        Matcher matcher = pattern.matcher(request);
-//        String requestLine = null;
-//        while (matcher.find()) {
-//            requestLine = matcher.group();
-//        }
-//        return requestLine;
-//    }
+    private void writeFile(byte[] fileBytes) {
+        final var filePath = Path.of(".", "public", "data.jpg");
+        try (var output = new BufferedOutputStream(new FileOutputStream(new File(filePath.toString())))) {
+            output.write(fileBytes);
+            output.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
-//    private String getRequestBody(String request) {
-//        // Получение тела POST запроса
-//        Pattern pattern = Pattern.compile("(.+)(\\r\\n\\r\\n)(.+)");
-//        Matcher matcher = pattern.matcher(request);
-//        String requestBody = null;
-//        while (matcher.find()) {
-//            requestBody = matcher.group(3);
-//        }
-//        return requestBody;
-//    }
+    }
+
+    private String findFileName(String requestContent) {
+        var pattern = Pattern.compile("filename=.+");
+        var matcher = pattern.matcher(requestContent);
+        String fileName = null;
+        while (matcher.find()) {
+            String x = matcher.group();
+            String[] split = x.split("=");
+            fileName = split[1].replaceAll("\"", "");
+        }
+        return fileName;
+    }
+
+    private void findContentParts(String content, Map<String, List<byte[]>> map) {
+        var pattern = Pattern.compile(".+");
+        var matcher = pattern.matcher(content);
+        String[] contentParts = new String[2];
+        int counter = 0;
+        while (matcher.find()) {
+            contentParts[counter++] = matcher.group();
+        }
+        pattern = Pattern.compile("(name=)(.+)");
+        matcher = pattern.matcher(contentParts[0]);
+        String contentName = null;
+        while (matcher.find()) {
+            contentName = matcher.group(2).replaceAll("\"", "");
+        }
+        String contentBody = contentParts[1];
+
+        if (map.get(contentName) != null) {
+            List<byte[]> requestPartsBytes = map.get(contentName);
+            requestPartsBytes.add(contentBody.getBytes());
+        } else {
+            List<byte[]> requestBytes = new ArrayList<>();
+            requestBytes.add(contentBody.getBytes());
+            map.put(contentName, requestBytes);
+        }
+    }
+
+    private void processingMultiPart(byte[] bodyBytes, String requestBody, int contentLength, String headerParam, RequestBuilder builder) throws IOException {
+        // найти обычные данные (имя - тело)
+        // найти файл (имя - тело)
+        Map<String, List<byte[]>> map = new HashMap<>();
+        String boundary = findBoundary(headerParam);
+        if (boundary != null) {
+            String[] bodyParts = requestBody.split("--".concat(boundary));
+            for (int i = 1; i < bodyParts.length - 1; i++) {
+                if (bodyParts[i].contains("Content-Type")) {
+                    // мапа: имя файла - байтовое представление содержимого
+                    String fileName = findFileName(bodyParts[i]);
+                    byte[] contentTypeDelimiter = getContentTypeDelimiter(bodyParts[i]);
+                    byte[] boundaryBytes = getContentBytes("--".concat(boundary));
+                    byte[] fileBody = getFileBody(contentTypeDelimiter, boundaryBytes, bodyBytes, contentLength);
+                    // добавить в билдер
+                    if (map.get(fileName) != null) {
+                        List<byte[]> requestPartsBytes = map.get(fileName);
+                        requestPartsBytes.add(fileBody);
+                    } else {
+                        List<byte[]> requestBytes = new ArrayList<>();
+                        requestBytes.add(fileBody);
+                        map.put(fileName, requestBytes);
+                    }
+                } else {
+                    // иначе это обычные данные
+                    findContentParts(bodyParts[i], map);
+                }
+
+            }
+//            for (Map.Entry<String, List<byte[]>> stringListEntry : map.entrySet()) {
+//                System.out.println(stringListEntry.getKey() + " : ");
+//                for (byte[] bytes : stringListEntry.getValue()) {
+//                    System.out.println(new String(bytes));
+//                }
+//            }
+            builder.setParts(map);
+        }
+    }
 
     //    Установка handler`ов по-умолчанию:
     private void installDefaultHandlers() {
@@ -456,4 +473,121 @@ public class Server {
         }));
         handlers.put("GET", defaultHandlers);
     }
+
+    //    private String[] parsingRequestLine(String requestLine) {
+//        return requestLine.split(" ");
+//    }
+
+//    private boolean processingRequest(String request) {
+//        // Если у POST запроса отсутствует тело
+//        if (request.matches("POST.+")) {
+//            return false;
+//        }
+//        if (request.matches("POST.+\\r\\n\\r\\n.+")) {
+//            return processingPOSTRequest(request);
+//        } else {
+//            // Проверка GET запроса
+//            return checkRequestLineParts(parsingRequestLine(getRequestLine((request))));
+//        }
+//    }
+
+//    private Map<String, String> getRequestHeaders(String request) {
+//        Pattern pattern = Pattern.compile("(.+):(.+)");
+//        Matcher matcher = pattern.matcher(request);
+//        Map<String, String> headers = new HashMap<>();
+//        while (matcher.find()) {
+//            headers.put(matcher.group(1), matcher.group(2));
+//        }
+//        return headers;
+//    }
+
+
+//    private boolean processingPOSTRequest(String request) {
+//        return checkRequestLineParts(parsingRequestLine(getRequestLine(request)));
+//    }
+
+//    private String getRequestLine(String request) {
+//        Pattern pattern = Pattern.compile("(GET|POST).+");
+//        Matcher matcher = pattern.matcher(request);
+//        String requestLine = null;
+//        while (matcher.find()) {
+//            requestLine = matcher.group();
+//        }
+//        return requestLine;
+//    }
+
+//    private String getRequestBody(String request) {
+//        // Получение тела POST запроса
+//        Pattern pattern = Pattern.compile("(.+)(\\r\\n\\r\\n)(.+)");
+//        Matcher matcher = pattern.matcher(request);
+//        String requestBody = null;
+//        while (matcher.find()) {
+//            requestBody = matcher.group(3);
+//        }
+//        return requestBody;
+//    }
+
+
+//    int x;
+//                    List<Byte> bytes = new ArrayList<>();
+//                    while ((x = in.read()) != -1) {
+//                        bytes.add((byte) x);
+//                        if (in.available() == 0) {
+//                            break;
+//                        }
+//                    }
+//                    byte[] bytesArray = new byte[bytes.size()];
+//                    int counter = 0;
+//                    for (Byte readByte : bytes) {
+//                        bytesArray[counter++] = readByte;
+//                    }
+//                    String request = new String(bytesArray);
+////                    System.out.println(request);
+//
+//                    if (!processingRequest(request)) {
+//                        out.write("Bad request :( ".getBytes());
+//                        break;
+//                    }
+//
+//                    final var parts = parsingRequestLine(getRequestLine(request));
+//
+//                    RequestBuilder builder = new RequestBuilder()
+//                            .setRequestMethod(parts[0]);
+//
+//                    var path = parts[1];
+////                    System.out.println(path);
+//
+//                    if (!requestPathContainsQuery(path)) {
+//                        builder.setRequestPath(path);
+//                    } else {
+//                        builder.setQuery(getQuery(path));
+//                        path = getPathWithoutQuery(path);
+//                        builder.setRequestPath(path);
+//                    }
+//
+//                    builder.setProtocolType(parts[2]);
+//
+//                    if (!validPaths.contains(path)) {
+//                        builder.setRequestPath("InvalidPaths");
+//                        sendResponse(builder.build(), out);
+//                        break;
+//                    }
+//
+//                    builder.setRequestHeaders(getRequestHeaders(request));
+//
+//                    if (getRequestBody(request) != null) {
+//                        String requestBody = getRequestBody(request);
+//                        builder.setBodyParams(processingBodyParams(requestBody));
+//                        builder.setRequestBody(requestBody);
+//                    }
+//
+//                    final var filePath = Path.of(".", "public", path);
+//                    final var mimeType = Files.probeContentType(filePath);
+//                    final var length = Files.size(filePath);
+//
+//                    builder.setFilePath(filePath)
+//                            .setMimeType(mimeType)
+//                            .setFileSize(length);
+//                    sendResponse(builder.build(), out);
+//                    break;
 }
